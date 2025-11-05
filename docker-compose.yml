@@ -1,53 +1,190 @@
-version: '3.8'
-
 services:
-  app:
-    build: .
+  # =========================
+  # Flask (desarrollo)
+  # =========================
+  chatbot_api_app:
+    image: python:3.12-slim
+    container_name: chatbot_api_app
+    restart: unless-stopped
+    platform: linux/x86_64
+    tty: true
+    working_dir: /app
+    command: >
+      bash -c "
+      export FLASK_APP=run:app &&
+      export FLASK_PORT=$${FLASK_PORT:-8000} &&
+      python -m pip install --upgrade pip &&
+      pip install --prefer-binary --no-input -r requirements-dev.txt 2>/dev/null || pip install --prefer-binary --no-input -r requirements.txt &&
+      flask run --host 0.0.0.0 --port $$FLASK_PORT
+      "
+    env_file:
+      - .env
+    environment:
+      FLASK_APP: run:app
+      FLASK_ENV: ${FLASK_ENV:-development}
+      FLASK_DEBUG: ${FLASK_DEBUG:-1}
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTHONUNBUFFERED: "1"
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@chatbot_api_db:5432/${POSTGRES_DB}
+      REDIS_URL: redis://chatbot_api_redis:6379/0
+    volumes:
+      - ./:/app
+      - pip-cache:/root/.cache/pip
+      - ./instance:/app/instance
     ports:
-      - "5000:5000"
-    volumes:
-      - .:/usr/src/app
-    environment:
-      - FLASK_APP=run.py
-      - FLASK_ENV=development
-      - DATABASE_URL=postgresql://user:password@db:5432/appdb
+      - "${FLASK_PORT:-8000}:8000"
     depends_on:
-      - db
+      - chatbot_api_db
+      - chatbot_api_redis
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import requests; requests.get('http://localhost:8000/', timeout=2)\" || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 30s
+    networks:
+      - chatbot-api-network
 
-  db:
-    image: postgres:13
-    volumes:
-      - postgres_data:/var/lib/postgresql/data/
+  # =========================
+  # Postgres
+  # =========================
+  chatbot_api_db:
+    image: postgres:16-alpine
+    container_name: chatbot_api_db
+    restart: unless-stopped
+    platform: linux/x86_64
+    tty: true
     environment:
-      - POSTGRES_USER=user
-      - POSTGRES_PASSWORD=password
-      - POSTGRES_DB=appdb
-
-  wordpress:
-    image: wordpress:latest
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - dbdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - chatbot-api-network
     ports:
-      - "8080:80"
-    environment:
-      - WORDPRESS_DB_HOST=db_wordpress
-      - WORDPRESS_DB_USER=wordpress
-      - WORDPRESS_DB_PASSWORD=wordpress
-      - WORDPRESS_DB_NAME=wordpress
-    depends_on:
-      - db_wordpress
-    volumes:
-      - wordpress_data:/var/www/html
+      - "5432:5432"
 
-  db_wordpress:
-    image: mysql:5.7
-    environment:
-      - MYSQL_DATABASE=wordpress
-      - MYSQL_USER=wordpress
-      - MYSQL_PASSWORD=wordpress
-      - MYSQL_ROOT_PASSWORD=wordpress
+  # =========================
+  # Redis
+  # =========================
+  chatbot_api_redis:
+    image: redis:7-alpine
+    container_name: chatbot_api_redis
+    restart: unless-stopped
+    platform: linux/x86_64
+    tty: true
+    command: ["redis-server", "--appendonly", "yes"]
     volumes:
-      - db_wordpress_data:/var/lib/mysql
+      - redisdata:/data
+    networks:
+      - chatbot-api-network
+    ports:
+      - "6379:6379"
+
+  # =========================
+  # MySQL + WordPress
+  # =========================
+  chatbot_api_wordpress_db:
+    image: mysql:8.0
+    container_name: chatbot_api_wordpress_db
+    restart: unless-stopped
+    tty: true
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-migrate_wp}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      SERVICE_TAGS: dev
+      SERVICE_NAME: mysql
+    # command:
+    #   - --skip-grant-tables
+    #   - --skip-networking=0
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysqldata:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "sh", "-c", "mysqladmin ping -h localhost -uroot -p\"$$MYSQL_PASSWORD\" || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    networks:
+      - chatbot-api-network
+  chatbot_api_wordpress:
+    image: wordpress:php8.3-apache
+    container_name: chatbot_api_wordpress
+    restart: unless-stopped
+    platform: linux/x86_64
+    depends_on:
+      - chatbot_api_wordpress_db
+    environment:
+      WORDPRESS_DB_HOST: ${MYSQL_DB_HOST}:3306
+      WORDPRESS_DB_USER: ${MYSQL_USER:-migrate_wp}
+      WORDPRESS_DB_PASSWORD: ${MYSQL_PASSWORD}
+      WORDPRESS_DB_NAME: ${MYSQL_DATABASE:-wordpress}
+      WORDPRESS_DEBUG: ${WP_DEBUG:-1}
+    ports:
+      - "80:80"
+    volumes:
+      - wpdata:/var/www/html
+    networks:
+      - chatbot-api-network
+  chatbot_api_phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: chatbot_api_phpmyadmin
+    restart: unless-stopped
+    platform: linux/x86_64
+    depends_on:
+      - chatbot_api_wordpress_db
+    environment:
+      PMA_HOST: ${MYSQL_DB_HOST}
+      PMA_PORT: 3306
+      MYSQL_ROOT_PASSWORD: ${MYSQL_PASSWORD}
+      UPLOAD_LIMIT: 300M
+    ports:
+      - "81:80"
+    networks:
+      - chatbot-api-network
+  chatbot_api_pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: chatbot_api_pgadmin
+    restart: unless-stopped
+    platform: linux/x86_64
+    depends_on:
+      - chatbot_api_db
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${POSTGRES_PASSWORD}
+      # Opcional: configura el servidor por defecto importando servers.json
+      # PGADMIN_CONFIG_ENHANCED_COOKIE_PROTECTION: "True"
+    volumes:
+      - pgadmindata:/var/lib/pgadmin
+      # - ./deploy/pgadmin/servers.json:/pgadmin4/servers.json:ro
+    ports:
+      - "5050:80"
+    networks:
+      - chatbot-api-network
+
+networks:
+  chatbot-api-network:
+    driver: bridge
 
 volumes:
-  postgres_data:
-  wordpress_data:
-  db_wordpress_data:
+  dbdata:
+    driver: local
+  redisdata:
+    driver: local
+  pip-cache:
+    driver: local
+  mysqldata:
+    driver: local
+  wpdata:
+    driver: local
+  pgadmindata:
+    driver: local

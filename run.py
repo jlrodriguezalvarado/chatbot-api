@@ -1,7 +1,7 @@
 from app.aplication import create_app, db
 from app.aplication.models.apikey import ApiKey
 from app.aplication.models.post import Post
-from app.aplication.commands import create_apikey, list_apikeys, populate_wordpress, import_wordpress_posts
+from app.aplication.commands import create_apikey, list_apikeys, populate_wordpress, import_wordpress_posts, import_wines_from_json, build_vs
 import os
 
 app = create_app()
@@ -10,6 +10,8 @@ app.cli.add_command(create_apikey)
 app.cli.add_command(list_apikeys)
 app.cli.add_command(populate_wordpress)
 app.cli.add_command(import_wordpress_posts)
+app.cli.add_command(import_wines_from_json)
+app.cli.add_command(build_vs)
 
 @app.shell_context_processor
 def make_shell_context():

@@ -1,0 +1,72 @@
+# --- Python básico ---
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+.eggs/
+build/
+dist/
+*.egg
+*.manifest
+*.spec
+
+# --- Entornos virtuales ---
+venv/
+.venv/
+env/
+.env/
+ENV/
+.python-version  # pyenv
+
+# --- Configuración / variables de entorno ---
+# Mantén secretos fuera del repo
+.env
+.env.*          # .env.local, .env.dev, etc.
+.flaskenv       # si lo usas para FLASK_APP/FLASK_ENV
+
+# --- Flask específico ---
+instance/       # config/archivos locales creados por Flask (normalmente no versionar)
+*.db            # SQLite local
+*.sqlite
+*.sqlite3
+
+# --- Logs y runtime ---
+*.log
+logs/
+tmp/
+run/
+celerybeat-schedule
+celerybeat.pid
+
+# --- Pruebas / QA ---
+.coverage
+coverage.xml
+htmlcov/
+.pytest_cache/
+.tox/
+.mypy_cache/
+.pyre/
+.cache/
+
+# --- Documentación ---
+_site/
+docs/_build/
+
+# --- Herramientas y gestores de dependencias ---
+pip-wheel-metadata/
+Pipfile.lock     # si prefieres no versionarlo (opcional)
+poetry.lock      # idem, según tu flujo (opcional)
+
+# --- IDEs / SO ---
+.vscode/
+.idea/
+*.iml
+.DS_Store
+Thumbs.db
+
+# --- Docker / Compose (si aplica) ---
+# El .env de compose no debería ir al repo si tiene secretos
+docker-compose.override.yml
+.env.docker

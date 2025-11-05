@@ -5,3 +5,5 @@ psycopg2-binary
 requests
 click
 Faker
+python-dotenv
+openai>=1.40.0
