@@ -2,9 +2,29 @@ from app.aplication import create_app, db
 from app.aplication.models.apikey import ApiKey
 from app.aplication.models.post import Post
 from app.aplication.commands import create_apikey, list_apikeys, populate_wordpress, import_wordpress_posts, import_wines_from_json, build_vs
+from flask_cors import CORS
 import os
 
 app = create_app()
+
+# --- CORS ---
+CORS_ORIGINS = os.environ.get(
+    "CORS_ORIGINS",
+    "http://localhost:8080,http://127.0.0.1:8080"
+)
+origins = [o.strip() for o in CORS_ORIGINS.split(",") if o.strip()]
+
+CORS(
+    app,
+    resources={
+        r"/chat/*": {"origins": origins}   # ajusta el prefijo si tus endpoints cambian
+    },
+    supports_credentials=False,
+    methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
+    max_age=3600,
+)
+
 
 app.cli.add_command(create_apikey)
 app.cli.add_command(list_apikeys)
