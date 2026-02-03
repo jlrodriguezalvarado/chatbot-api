@@ -7,7 +7,16 @@ class Config:
     # SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'you-will-never-guess'
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'postgresql://user:password@db:5432/appdb'
+    # SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'postgresql://user:password@db:5432/appdb'
+    # MySQL database URI
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
+        'mysql+pymysql://{user}:{password}@{host}:{port}/{database}'.format(
+            user=os.environ.get('MYSQL_USER', 'wordpress'),
+            password=os.environ.get('MYSQL_PASSWORD', 'password'),
+            host=os.environ.get('MYSQL_HOST', 'chatbot_api_wordpress_db'),
+            port=os.environ.get('MYSQL_PORT', '3306'),
+            database=os.environ.get('MYSQL_DATABASE', 'wordpress')
+        )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     # OpenAI / Vector Store

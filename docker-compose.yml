@@ -25,7 +25,8 @@ services:
       FLASK_DEBUG: ${FLASK_DEBUG:-1}
       PYTHONDONTWRITEBYTECODE: "1"
       PYTHONUNBUFFERED: "1"
-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@chatbot_api_db:5432/${POSTGRES_DB}
+      # DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@chatbot_api_db:5432/${POSTGRES_DB}
+      DATABASE_URL: mysql+pymysql://${MYSQL_USER}:${MYSQL_PASSWORD}@chatbot_api_wordpress_db:3306/${MYSQL_DATABASE}
       REDIS_URL: redis://chatbot_api_redis:6379/0
     volumes:
       - ./:/app
@@ -34,8 +35,9 @@ services:
     ports:
       - "${FLASK_PORT:-8000}:8000"
     depends_on:
-      - chatbot_api_db
-      - chatbot_api_redis
+      - chatbot_api_wordpress_db
+      # - chatbot_api_mysql
+      # - chatbot_api_redis
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import requests; requests.get('http://localhost:8000/', timeout=2)\" || exit 1"]
       interval: 10s
@@ -48,44 +50,71 @@ services:
   # =========================
   # Postgres
   # =========================
-  chatbot_api_db:
-    image: postgres:16-alpine
-    container_name: chatbot_api_db
-    restart: unless-stopped
-    platform: linux/x86_64
-    tty: true
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-    volumes:
-      - dbdata:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-    networks:
-      - chatbot-api-network
-    ports:
-      - "5432:5432"
+  # chatbot_api_db:
+  #   image: postgres:16-alpine
+  #   container_name: chatbot_api_db
+  #   restart: unless-stopped
+  #   platform: linux/x86_64
+  #   tty: true
+  #   environment:
+  #     POSTGRES_DB: ${POSTGRES_DB}
+  #     POSTGRES_USER: ${POSTGRES_USER}
+  #     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+  #   volumes:
+  #     - dbdata:/var/lib/postgresql/data
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 10
+  #   networks:
+  #     - chatbot-api-network
+  #   ports:
+  #     - "5432:5432"
+
+  # =========================
+  # MySQL (WordPress compatible)
+  # =========================
+  # chatbot_api_mysql:
+  #   image: mysql:8.0
+  #   container_name: chatbot_api_mysql
+  #   restart: unless-stopped
+  #   platform: linux/x86_64
+  #   tty: true
+  #   environment:
+  #     MYSQL_DATABASE: ${MYSQL_DATABASE:-wordpress}
+  #     MYSQL_USER: ${MYSQL_USER:-wordpress}
+  #     MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+  #     MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-${MYSQL_PASSWORD}}
+  #   volumes:
+  #     - mysqldata_wp:/var/lib/mysql
+  #   healthcheck:
+  #     test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$$MYSQL_ROOT_PASSWORD"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 10
+  #     start_period: 30s
+  #   networks:
+  #     - chatbot-api-network
+  #   ports:
+  #     - "3306:3306"
 
   # =========================
   # Redis
   # =========================
-  chatbot_api_redis:
-    image: redis:7-alpine
-    container_name: chatbot_api_redis
-    restart: unless-stopped
-    platform: linux/x86_64
-    tty: true
-    command: ["redis-server", "--appendonly", "yes"]
-    volumes:
-      - redisdata:/data
-    networks:
-      - chatbot-api-network
-    ports:
-      - "6379:6379"
+  # chatbot_api_redis:
+  #   image: redis:7-alpine
+  #   container_name: chatbot_api_redis
+  #   restart: unless-stopped
+  #   platform: linux/x86_64
+  #   tty: true
+  #   command: ["redis-server", "--appendonly", "yes"]
+  #   volumes:
+  #     - redisdata:/data
+  #   networks:
+  #     - chatbot-api-network
+  #   ports:
+  #     - "6379:6379"
 
   # =========================
   # MySQL + WordPress
@@ -151,25 +180,22 @@ services:
       - "81:80"
     networks:
       - chatbot-api-network
-  chatbot_api_pgadmin:
-    image: dpage/pgadmin4:latest
-    container_name: chatbot_api_pgadmin
-    restart: unless-stopped
-    platform: linux/x86_64
-    depends_on:
-      - chatbot_api_db
-    environment:
-      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
-      PGADMIN_DEFAULT_PASSWORD: ${POSTGRES_PASSWORD}
-      # Opcional: configura el servidor por defecto importando servers.json
-      # PGADMIN_CONFIG_ENHANCED_COOKIE_PROTECTION: "True"
-    volumes:
-      - pgadmindata:/var/lib/pgadmin
-      # - ./deploy/pgadmin/servers.json:/pgadmin4/servers.json:ro
-    ports:
-      - "5050:80"
-    networks:
-      - chatbot-api-network
+  # chatbot_api_pgadmin:
+  #   image: dpage/pgadmin4:latest
+  #   container_name: chatbot_api_pgadmin
+  #   restart: unless-stopped
+  #   platform: linux/x86_64
+  #   depends_on:
+  #     - chatbot_api_db
+  #   environment:
+  #     PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
+  #     PGADMIN_DEFAULT_PASSWORD: ${POSTGRES_PASSWORD}
+  #   volumes:
+  #     - pgadmindata:/var/lib/pgadmin
+  #   ports:
+  #     - "5050:80"
+  #   networks:
+  #     - chatbot-api-network
 
 networks:
   chatbot-api-network:
@@ -183,6 +209,8 @@ volumes:
   pip-cache:
     driver: local
   mysqldata:
+    driver: local
+  mysqldata_wp:
     driver: local
   wpdata:
     driver: local
