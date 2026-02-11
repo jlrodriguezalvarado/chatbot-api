@@ -1,7 +1,8 @@
 from app.aplication import create_app, db
 from app.aplication.models.apikey import ApiKey
 from app.aplication.models.post import Post
-from app.aplication.commands import create_apikey, list_apikeys, populate_wordpress, import_wordpress_posts, import_wines_from_json, build_vs
+from app.aplication.models.vector_store_record import VectorStoreRecord
+from app.aplication.commands import create_apikey, list_apikeys, populate_wordpress, import_wordpress_posts, build_vs, delete_vs, generate_secret_key
 from flask_cors import CORS
 import os
 
@@ -28,14 +29,15 @@ CORS(
 
 app.cli.add_command(create_apikey)
 app.cli.add_command(list_apikeys)
+app.cli.add_command(generate_secret_key)
 app.cli.add_command(populate_wordpress)
 app.cli.add_command(import_wordpress_posts)
-app.cli.add_command(import_wines_from_json)
 app.cli.add_command(build_vs)
+app.cli.add_command(delete_vs)
 
 @app.shell_context_processor
 def make_shell_context():
-    return {'db': db, 'ApiKey': ApiKey, 'Post': Post}
+    return {'db': db, 'ApiKey': ApiKey, 'Post': Post, 'VectorStoreRecord': VectorStoreRecord}
 
 if __name__ == '__main__':
     # Set the FLASK_APP environment variable if it's not already set

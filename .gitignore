@@ -69,4 +69,8 @@ Thumbs.db
 # --- Docker / Compose (si aplica) ---
 # El .env de compose no debería ir al repo si tiene secretos
 docker-compose.override.yml
-.env.docker
+.env.dockerwp-config.php
+
+xtrawine_wines.json
+xtrawine_wines.ndjson
+wp-config.php

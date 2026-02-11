@@ -66,8 +66,8 @@ def run_migrations_offline():
 
     """
     # Importar modelos para que Alembic los detecte
-    from app.aplication.models import apikey, post  # noqa
-    
+    from app.aplication.models import apikey, post, vector_store_record  # noqa
+
     url = config.get_main_option("sqlalchemy.url")
     context.configure(
         url=url, target_metadata=get_metadata(), literal_binds=True
@@ -85,7 +85,7 @@ def run_migrations_online():
 
     """
     # Importar modelos para que Alembic los detecte
-    from app.aplication.models import apikey, post  # noqa
+    from app.aplication.models import apikey, post, vector_store_record  # noqa
 
     # this callback is used to prevent an auto-migration from being generated
     # when there are no changes to the schema

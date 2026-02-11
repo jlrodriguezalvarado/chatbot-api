@@ -26,7 +26,7 @@ services:
       PYTHONDONTWRITEBYTECODE: "1"
       PYTHONUNBUFFERED: "1"
       # DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@chatbot_api_db:5432/${POSTGRES_DB}
-      DATABASE_URL: mysql+pymysql://${MYSQL_USER}:${MYSQL_PASSWORD}@chatbot_api_wordpress_db:3306/${MYSQL_DATABASE}
+      DATABASE_URL: mysql+pymysql://${MYSQL_USER}:${MYSQL_PASSWORD}@chatbot_api_wordpress_db:3306/${MYSQL_DATABASE_API:-chatbot_api_db}
       REDIS_URL: redis://chatbot_api_redis:6379/0
     volumes:
       - ./:/app
@@ -125,7 +125,7 @@ services:
     restart: unless-stopped
     tty: true
     environment:
-      MYSQL_DATABASE: ${MYSQL_DATABASE:-migrate_wp}
+      MYSQL_DATABASE: ${MYSQL_DATABASE_WP:-migrate_wp}
       MYSQL_ROOT_PASSWORD: ${MYSQL_PASSWORD}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
       SERVICE_TAGS: dev
@@ -154,14 +154,17 @@ services:
       - chatbot_api_wordpress_db
     environment:
       WORDPRESS_DB_HOST: ${MYSQL_DB_HOST}:3306
-      WORDPRESS_DB_USER: ${MYSQL_USER:-migrate_wp}
+      WORDPRESS_DB_USER: ${MYSQL_USER:-root}
       WORDPRESS_DB_PASSWORD: ${MYSQL_PASSWORD}
-      WORDPRESS_DB_NAME: ${MYSQL_DATABASE:-wordpress}
+      WORDPRESS_DB_NAME: ${MYSQL_DATABASE_API:-chatbot_api_db}
       WORDPRESS_DEBUG: ${WP_DEBUG:-1}
     ports:
       - "80:80"
     volumes:
       - wpdata:/var/www/html
+      - ./wp-config.php:/var/www/html/wp-config.php
+      - ./wordpress-plugin/vinum-wines:/var/www/html/wp-content/plugins/vinum-wines
+      - ./wordpress-plugin/vinum-chatbot:/var/www/html/wp-content/plugins/vinum-chatbot
     networks:
       - chatbot-api-network
   chatbot_api_phpmyadmin:

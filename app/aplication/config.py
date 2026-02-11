@@ -15,7 +15,7 @@ class Config:
             password=os.environ.get('MYSQL_PASSWORD', 'password'),
             host=os.environ.get('MYSQL_HOST', 'chatbot_api_wordpress_db'),
             port=os.environ.get('MYSQL_PORT', '3306'),
-            database=os.environ.get('MYSQL_DATABASE', 'wordpress')
+            database=os.environ.get('MYSQL_DATABASE_API', 'wordpress')
         )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
@@ -27,5 +27,5 @@ class Config:
 
     CORS_ORIGINS = os.environ.get(
         'CORS_ORIGINS',
-        'http://localhost:8080,http://127.0.0.1:8080'
+        'http://localhost,http://127.0.0.1'
     )
