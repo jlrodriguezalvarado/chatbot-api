@@ -1,1 +1,1 @@
-docker-compose exec -it chatbot_api_app bash
+docker compose exec -it chatbot_api_app bash
